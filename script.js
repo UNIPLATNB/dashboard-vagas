@@ -3,7 +3,7 @@ const url = "https://docs.google.com/spreadsheets/d/12Ou7DzGLBmYIxUDJqvgRnVUejhe
 let dados = [];
 let grafico;
 
-// Carrega dados
+// Carrega dados da planilha
 fetch(url)
   .then(res => res.text())
   .then(text => {
@@ -16,12 +16,12 @@ fetch(url)
         serie: r.c[2]?.v?.trim(),
         vagas: Number(r.c[3]?.v || 0)
       }))
-      .filter(d => d.regiao && d.escola);
+      .filter(d => d.regiao && d.escola && d.serie);
 
     criarTags();
   });
 
-// TAGS
+// Cria TAGS de região
 function criarTags() {
   const container = document.getElementById("tagsRegioes");
   const regioes = [...new Set(dados.map(d => d.regiao))];
@@ -48,7 +48,78 @@ function criarTags() {
   });
 }
 
-// Atualiza cards + gráfico
+// Atualiza cards, total e gráfico
 function atualizar(regiao) {
   const filtrados = dados.filter(d => d.regiao === regiao);
-  const container = document.getElementById("cardsContai
+  const container = document.getElementById("cardsContainer");
+  container.innerHTML = "";
+
+  // AGRUPA POR ESCOLA
+  const escolas = {};
+  let totalVagas = 0;
+
+  filtrados.forEach(d => {
+    if (!escolas[d.escola]) {
+      escolas[d.escola] = [];
+    }
+    escolas[d.escola].push({ serie: d.serie, vagas: d.vagas });
+    totalVagas += d.vagas;
+  });
+
+  // Atualiza total
+  document.getElementById("totalVagas").textContent =
+    `Total de vagas na região: ${totalVagas}`;
+
+  // Cria cards
+  Object.keys(escolas).forEach(escola => {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    let htmlSeries = "";
+    escolas[escola].forEach(s => {
+      htmlSeries += `
+        <div class="serie">
+          <span>${s.serie}</span>
+          <strong>${s.vagas}</strong>
+        </div>
+      `;
+    });
+
+    card.innerHTML = `
+      <h3>${escola}</h3>
+      ${htmlSeries}
+    `;
+
+    container.appendChild(card);
+  });
+
+  gerarGrafico(filtrados);
+}
+
+// Gráfico
+function gerarGrafico(dadosFiltrados) {
+  const labels = [];
+  const valores = [];
+
+  dadosFiltrados.forEach(d => {
+    labels.push(`${d.escola} - ${d.serie}`);
+    valores.push(d.vagas);
+  });
+
+  if (grafico) grafico.destroy();
+
+  grafico = new Chart(document.getElementById("graficoVagas"), {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Vagas disponíveis",
+        data: valores
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks
