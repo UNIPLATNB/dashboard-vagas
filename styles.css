@@ -1,11 +1,12 @@
 body {
+  background-color: #f1f1f1;
+  margin: 0;
   font-family: Arial, sans-serif;
-  background-color: #f2f2f2;
-  padding: 20px;
 }
 
 h1 {
   text-align: center;
+  margin: 20px 0;
 }
 
 #cards {
@@ -21,9 +22,4 @@ h1 {
   width: 260px;
   border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
-
-.card h2 {
-  font-size: 16px;
-  margin-bottom: 10px;
 }
