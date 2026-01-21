@@ -1,15 +1,5 @@
 const planilhaId = "12Ou7DzGLBmYIxUDJqvgRnVUejheSMTSoD0dtkC_50BE";
 
-// índices das colunas (começando do zero)
-const COL_ESCOLA = 1; // coluna B
-
-const SERIES = [
-  { nome: 3, vagas: 4 },   // D / E
-  { nome: 6, vagas: 7 },   // G / H
-  { nome: 9, vagas: 10 },  // J / K
-  { nome: 12, vagas: 13 }  // M / N
-];
-
 function carregarRegiao(nomeAba) {
   const url = `https://docs.google.com/spreadsheets/d/${planilhaId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(nomeAba)}`;
 
@@ -22,22 +12,41 @@ function carregarRegiao(nomeAba) {
       const container = document.getElementById("cards");
       container.innerHTML = "";
 
-      // começa a partir da linha 5 (índice 4)
+      // começa na linha 5 (índice 4) – depois do cabeçalho
       linhas.slice(4).forEach(linha => {
-        if (!linha.c[COL_ESCOLA]) return;
+        if (!linha.c[1]) return; // coluna B (escola)
 
-        const escola = linha.c[COL_ESCOLA].v;
-
+        const escola = linha.c[1].v;
         const card = document.createElement("div");
         card.className = "card";
 
         let html = `<h2>${escola}</h2>`;
 
-        SERIES.forEach(serie => {
-          const nomeSerie = linha.c[serie.nome]?.v || "—";
-          const vagas = linha.c[serie.vagas]?.v ?? 0;
+        const etapas = [
+          { nome: linha.c[3]?.v, vagas: linha.c[4]?.v },   // D / E
+          { nome: linha.c[6]?.v, vagas: linha.c[7]?.v },   // G / H
+          { nome: linha.c[9]?.v, vagas: linha.c[10]?.v },  // J / K
+          { nome: linha.c[12]?.v, vagas: linha.c[13]?.v }  // M / N
+        ];
 
-          html += `<p><strong>${nomeSerie}:</strong> ${vagas} vaga(s)</p>`;
+        etapas.forEach(etapa => {
+          if (etapa.nome) {
+            const vagas = etapa.vagas ?? 0;
+            html += `<p><strong>${etapa.nome}:</strong> ${vagas} vaga(s)</p>`;
+          }
         });
 
-        card.in
+        card.innerHTML = html;
+        container.appendChild(card);
+      });
+    })
+    .catch(err => {
+      console.error("Erro ao carregar dados:", err);
+    });
+}
+
+const select = document.getElementById("regiao");
+select.addEventListener("change", () => carregarRegiao(select.value));
+
+// carrega a primeira região ao abrir
+carregarRegiao(select.value);
