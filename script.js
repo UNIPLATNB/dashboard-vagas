@@ -1,76 +1,130 @@
-const planilhaId = "12Ou7DzGLBmYIxUDJqvgRnVUejheSMTSoD0dtkC_50BE";
+// 🔗 LINK CSV DA ABA Dados_Site
+const CSV_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vS_jN8kcgwKuyt0tzJrNaDbrYIWE24WLKwdLSW6TCgFIp7YvV0Nu7Hrhv6fZUBFtwJESKynP5HaaRCs/pub?gid=1126119889&single=true&output=csv";
 
-// pares fixos de colunas (série -> vaga)
-const seriesMap = [
-  { serie: 3, vaga: 4 },    // D / E
-  { serie: 6, vaga: 7 },    // G / H
-  { serie: 9, vaga: 10 },   // J / K
-  { serie: 12, vaga: 13 },  // M / N
-  { serie: 15, vaga: 16 },  // P / Q
-  { serie: 18, vaga: 19 },  // S / T
-  { serie: 21, vaga: 22 },  // V / W
-  { serie: 24, vaga: 25 },  // Y / Z
-  { serie: 27, vaga: 28 },  // AB / AC
-  { serie: 30, vaga: 31 },  // AE / AF
-  { serie: 33, vaga: 34 },  // AH / AI
-  { serie: 36, vaga: 37 }   // AK / AL
-];
+const regiaoSelect = document.getElementById("regiaoSelect");
+const cardsContainer = document.getElementById("cardsContainer");
 
-function carregarRegiao(aba) {
-  const url = `https://docs.google.com/spreadsheets/d/${planilhaId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(aba)}`;
+let dadosGlobais = [];
 
-  fetch(url)
-    .then(r => r.text())
-    .then(text => {
-      const json = JSON.parse(text.substring(47, text.length - 2));
-      const rows = json.table.rows;
-      const cards = document.getElementById("cards");
-      cards.innerHTML = "";
+// =======================
+// CARREGAR CSV
+// =======================
+fetch(CSV_URL)
+  .then(response => response.text())
+  .then(csv => {
+    dadosGlobais = parseCSV(csv);
+    preencherFiltro(dadosGlobais);
+    montarCards(dadosGlobais);
+  })
+  .catch(error => {
+    cardsContainer.innerHTML = "<p>Erro ao carregar os dados.</p>";
+    console.error(error);
+  });
 
-      let cardAtual = null;
-      let htmlAtual = "";
+// =======================
+// PARSER CSV SIMPLES
+// =======================
+function parseCSV(csv) {
+  const linhas = csv.trim().split("\n");
+  linhas.shift(); // remove cabeçalho
 
-      for (let i = 4; i < rows.length; i++) {
-        const c = rows[i].c;
-        if (!c) continue;
+  return linhas.map(linha => {
+    // trata vírgulas dentro de aspas
+    const valores = [];
+    let atual = "";
+    let dentroAspas = false;
 
-        // se tem escola na coluna B, começa novo card
-        if (typeof c[1]?.v === "string" && c[1].v.trim() !== "") {
-          if (cardAtual) {
-            cardAtual.innerHTML = htmlAtual;
-            cards.appendChild(cardAtual);
-          }
-
-          cardAtual = document.createElement("div");
-          cardAtual.className = "card";
-          htmlAtual = `<h2>${c[1].v}</h2>`;
-        }
-
-        if (!cardAtual) continue;
-
-        // lê séries dessa linha
-        seriesMap.forEach(m => {
-          const nomeSerie =
-            typeof c[m.serie]?.v === "string"
-              ? c[m.serie].v
-              : null;
-
-          const vagas = c[m.vaga]?.v ?? 0;
-
-          if (nomeSerie) {
-            htmlAtual += `<p><strong>${nomeSerie}:</strong> ${vagas} vaga(s)</p>`;
-          }
-        });
+    for (let char of linha) {
+      if (char === '"') {
+        dentroAspas = !dentroAspas;
+      } else if (char === "," && !dentroAspas) {
+        valores.push(atual);
+        atual = "";
+      } else {
+        atual += char;
       }
+    }
+    valores.push(atual);
 
-      // adiciona o último card
-      if (cardAtual) {
-        cardAtual.innerHTML = htmlAtual;
-        cards.appendChild(cardAtual);
-      }
-    });
+    return valores.map(v => v.replace(/^"|"$/g, "").trim());
+  });
 }
 
-const select = document.getElementById("regiao");
-select.onchange = () => carregarRegiao(select.value);
-carregarRegiao(select.value);
+// =======================
+// FILTRO DE REGIÃO
+// =======================
+function preencherFiltro(dados) {
+  const regioes = [...new Set(dados.map(d => d[0]))].filter(Boolean);
+
+  regioes.forEach(regiao => {
+    const option = document.createElement("option");
+    option.value = regiao;
+    option.textContent = regiao;
+    regiaoSelect.appendChild(option);
+  });
+
+  regiaoSelect.addEventListener("change", () => {
+    const selecionada = regiaoSelect.value;
+    const filtrados = selecionada
+      ? dadosGlobais.filter(d => d[0] === selecionada)
+      : dadosGlobais;
+
+    montarCards(filtrados);
+  });
+}
+
+// =======================
+// MONTAR CARDS
+// =======================
+function montarCards(dados) {
+  cardsContainer.innerHTML = "";
+
+  if (dados.length === 0) {
+    cardsContainer.innerHTML = "<p>Nenhum dado encontrado.</p>";
+    return;
+  }
+
+  const escolas = {};
+
+  dados.forEach(([regiao, escola, serie, vagas]) => {
+    if (!escolas[escola]) {
+      escolas[escola] = [];
+    }
+
+    escolas[escola].push({
+      serie,
+      vagas: Number(vagas)
+    });
+  });
+
+  Object.entries(escolas).forEach(([escola, series]) => {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const titulo = document.createElement("h2");
+    titulo.textContent = escola;
+    card.appendChild(titulo);
+
+    series.forEach(item => {
+      const linha = document.createElement("div");
+      linha.className = "vaga";
+
+      if (item.vagas === 0) {
+        linha.classList.add("zero");
+      }
+
+      const serieSpan = document.createElement("span");
+      serieSpan.textContent = item.serie;
+
+      const vagaStrong = document.createElement("strong");
+      vagaStrong.textContent = item.vagas;
+
+      linha.appendChild(serieSpan);
+      linha.appendChild(vagaStrong);
+      card.appendChild(linha);
+    });
+
+    cardsContainer.appendChild(card);
+  });
+}
