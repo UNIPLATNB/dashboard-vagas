@@ -1,21 +1,37 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <title>Consulta de Vagas Escolares</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <title>Gestão de Vagas – CRE</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    select, table { margin-top: 15px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+    th { background: #f0f0f0; }
+  </style>
 </head>
 <body>
 
-  <header>
-    <h1>Consulta de Vagas</h1>
-    <select id="regiaoSelect">
-      <option value="">Todas as regiões</option>
-    </select>
-  </header>
+<h2>Gestão de Vagas por Região</h2>
 
-  <main id="cardsContainer"></main>
+<label>Selecione a Região:</label>
+<select id="regiaoSelect"></select>
 
-  <script src="script.js"></script>
+<table>
+  <thead>
+    <tr>
+      <th>Escola</th>
+      <th>Ano/Série</th>
+      <th>Vagas</th>
+    </tr>
+  </thead>
+  <tbody id="tabelaDados"></tbody>
+</table>
+
+<canvas id="graficoVagas" height="100"></canvas>
+
+<script src="script.js"></script>
 </body>
 </html>
