@@ -10,15 +10,18 @@ fetch(URL)
   .then(text => {
     const json = JSON.parse(text.substring(47).slice(0, -2));
 
-    // LÊ DIRETAMENTE POR POSIÇÃO DA COLUNA
-    dados = json.table.rows.map(r => ({
-      regiao: r.c[0]?.v || "",
-      escola: r.c[1]?.v || "",
-      serie: r.c[2]?.v || "",
-      vagas: Number(r.c[3]?.v) || 0
-    }));
+    const colunas = json.table.cols.map(c => c.label);
+    console.log("COLUNAS:", colunas);
 
-    console.log("DADOS PROCESSADOS:", dados);
+    dados = json.table.rows.map(linha => {
+      const obj = {};
+      linha.c.forEach((cel, i) => {
+        obj[colunas[i]] = cel && cel.v !== null ? cel.v : 0;
+      });
+      return obj;
+    });
+
+    console.log("DADOS:", dados);
     iniciar();
   })
   .catch(err => console.error("Erro ao carregar planilha:", err));
@@ -31,7 +34,7 @@ function criarTagsRegioes() {
   const div = document.getElementById("tagsRegioes");
   div.innerHTML = "";
 
-  const regioes = [...new Set(dados.map(d => d.regiao).filter(r => r))];
+  const regioes = [...new Set(dados.map(d => d["Região"]))];
   console.log("REGIÕES:", regioes);
 
   regioes.forEach((regiao, i) => {
@@ -48,51 +51,43 @@ function criarTagsRegioes() {
     div.appendChild(btn);
   });
 
-  if (regioes.length > 0) {
-    renderizar(regioes[0]);
-  }
+  renderizar(regioes[0]);
 }
 
-function renderizar(regiaoSelecionada) {
+function renderizar(regiao) {
   const container = document.getElementById("cardsContainer");
   container.innerHTML = "";
 
-  const filtrados = dados.filter(d => d.regiao === regiaoSelecionada);
+  const filtrados = dados.filter(d => d["Região"] === regiao);
+  console.log("FILTRADOS:", filtrados);
 
   const escolas = {};
-  let totalVagas = 0;
+  let total = 0;
 
   filtrados.forEach(d => {
-    totalVagas += d.vagas;
+    const escola = d["Escola"];
+    const serie = d["Série"];
+    const vagas = Number(d["Vagas"]) || 0;
 
-    if (!escolas[d.escola]) {
-      escolas[d.escola] = [];
-    }
+    total += vagas;
 
-    escolas[d.escola].push({
-      serie: d.serie || "Não informado",
-      vagas: d.vagas
-    });
+    if (!escolas[escola]) escolas[escola] = [];
+    escolas[escola].push({ serie, vagas });
   });
 
   document.getElementById("totalVagas").textContent =
-    `Total de vagas: ${totalVagas}`;
+    `Total de vagas: ${total}`;
 
   Object.keys(escolas).forEach(escola => {
     const card = document.createElement("div");
     card.className = "card";
 
-    const titulo = document.createElement("h3");
-    titulo.textContent = escola;
-    card.appendChild(titulo);
+    card.innerHTML = `<h3>${escola}</h3>`;
 
     escolas[escola].forEach(item => {
       const linha = document.createElement("div");
       linha.className = "linha";
-      linha.innerHTML = `
-        <span>${item.serie}</span>
-        <span>${item.vagas}</span>
-      `;
+      linha.innerHTML = `<span>${item.serie}</span><span>${item.vagas}</span>`;
       card.appendChild(linha);
     });
 
