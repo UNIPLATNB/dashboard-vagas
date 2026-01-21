@@ -7,38 +7,43 @@ function carregarRegiao(nomeAba) {
     .then(res => res.text())
     .then(text => {
       const json = JSON.parse(text.substring(47, text.length - 2));
-      const linhas = json.table.rows;
+      const rows = json.table.rows;
 
       const container = document.getElementById("cards");
       container.innerHTML = "";
 
-      // começa na linha 5 (índice 4) – depois do cabeçalho
-      linhas.slice(4).forEach(linha => {
-        if (!linha.c[1]) return; // coluna B (escola)
+      // começa APÓS o cabeçalho (linha 5)
+      for (let i = 4; i < rows.length; i++) {
+        const c = rows[i].c;
 
-        const escola = linha.c[1].v;
+        if (!c || !c[1] || !c[1].v) continue; // coluna B – escola
+
+        const escola = c[1].v;
         const card = document.createElement("div");
         card.className = "card";
 
         let html = `<h2>${escola}</h2>`;
 
-        const etapas = [
-          { nome: linha.c[3]?.v, vagas: linha.c[4]?.v },   // D / E
-          { nome: linha.c[6]?.v, vagas: linha.c[7]?.v },   // G / H
-          { nome: linha.c[9]?.v, vagas: linha.c[10]?.v },  // J / K
-          { nome: linha.c[12]?.v, vagas: linha.c[13]?.v }  // M / N
+        const dados = [
+          { serie: c[3]?.v, vagas: c[4]?.v },   // D / E
+          { serie: c[6]?.v, vagas: c[7]?.v },   // G / H
+          { serie: c[9]?.v, vagas: c[10]?.v },  // J / K
+          { serie: c[12]?.v, vagas: c[13]?.v }  // M / N
         ];
 
-        etapas.forEach(etapa => {
-          if (etapa.nome) {
-            const vagas = etapa.vagas ?? 0;
-            html += `<p><strong>${etapa.nome}:</strong> ${vagas} vaga(s)</p>`;
+        dados.forEach(item => {
+          if (item.serie) {
+            const vagas = item.vagas !== null && item.vagas !== undefined
+              ? item.vagas
+              : 0;
+
+            html += `<p><strong>${item.serie}:</strong> ${vagas} vaga(s)</p>`;
           }
         });
 
         card.innerHTML = html;
         container.appendChild(card);
-      });
+      }
     })
     .catch(err => {
       console.error("Erro ao carregar dados:", err);
@@ -48,5 +53,5 @@ function carregarRegiao(nomeAba) {
 const select = document.getElementById("regiao");
 select.addEventListener("change", () => carregarRegiao(select.value));
 
-// carrega a primeira região ao abrir
+// carrega ao abrir
 carregarRegiao(select.value);
