@@ -14,6 +14,13 @@
 
     h2 {
       text-align: center;
+      margin-bottom: 5px;
+    }
+
+    .total {
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
       margin-bottom: 15px;
     }
 
@@ -36,7 +43,7 @@
     /* GRID DE CARDS */
     .cards {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 15px;
       margin-top: 20px;
     }
@@ -53,4 +60,34 @@
       font-size: 16px;
     }
 
-    .li
+    .serie {
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid #eee;
+      padding: 4px 0;
+    }
+
+    .serie:last-child {
+      border-bottom: none;
+    }
+
+    canvas {
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Vagas disponíveis por escola</h2>
+<div id="totalVagas" class="total"></div>
+
+<div id="tagsRegioes" style="text-align:center;"></div>
+
+<div id="cardsContainer" class="cards"></div>
+
+<canvas id="graficoVagas" height="120"></canvas>
+
+<script src="script.js"></script>
+</body>
+</html>
