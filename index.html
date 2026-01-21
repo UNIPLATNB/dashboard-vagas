@@ -1,118 +1,16 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<title>Consulta de Vagas por Região</title>
-
-<style>
-body { font-family: Arial, sans-serif; margin: 20px; }
-select { padding: 6px; margin-bottom: 15px; }
-table { width: 100%; border-collapse: collapse; }
-th, td { border: 1px solid #ccc; padding: 6px; }
-th { background: #f2f2f2; }
-</style>
+  <meta charset="UTF-8">
+  <title>Vagas por Escola</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
 
-<h1>Consulta de vagas por Região</h1>
+<h1>Vagas disponíveis por escola</h1>
 
-<select id="regiaoSelect">
-  <option value="">Selecione a região</option>
-</select>
+<div id="cards"></div>
 
-<table>
-<thead>
-<tr>
-  <th>Unidade Escolar</th>
-  <th>Etapa</th>
-  <th>Ano / Série</th>
-  <th>Vagas</th>
-</tr>
-</thead>
-<tbody id="tabela"></tbody>
-</table>
-
-<script>
-const planilhaId = "1n2be7xn-2u-zP1nOT7nKPZZ4_dPqK6k__zgyyhIqZ_w";
-
-const regioes = [
-  "Núcleo Bandeirante",
-  "Candangolândia",
-  "Riacho Fundo I",
-  "Riacho Fundo II"
-];
-
-const dados = [];
-
-function csvUrl(aba) {
-  return `https://docs.google.com/spreadsheets/d/${planilhaId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(aba)}`;
-}
-
-async function carregarDados() {
-  for (const regiao of regioes) {
-    const res = await fetch(csvUrl(regiao));
-    const texto = await res.text();
-    const linhas = texto.split("\n").slice(4);
-
-    linhas.forEach(l => {
-      const c = l.split(",");
-
-      const escola = c[1]?.replace(/"/g,"");
-      if (!escola) return;
-
-      const etapas = [
-        { etapa:"Ensino Infantil", ano:c[3], vagas:c[4] },
-        { etapa:"Ensino Fundamental Anos Iniciais", ano:c[6], vagas:c[7] },
-        { etapa:"Ensino Fundamental Anos Finais", ano:c[9], vagas:c[10] },
-        { etapa:"Ensino Médio", ano:c[12], vagas:c[13] },
-        { etapa:"EJA (Noturno)", ano:c[15], vagas:c[16] }
-      ];
-
-      etapas.forEach(e=>{
-        dados.push({
-          regiao,
-          escola,
-          etapa: e.etapa,
-          ano: (e.ano||"").replace(/"/g,""),
-          vagas: e.vagas ? e.vagas.replace(/"/g,"") : ""
-        });
-      });
-    });
-  }
-
-  preencherFiltro();
-}
-
-function preencherFiltro() {
-  const sel = document.getElementById("regiaoSelect");
-  regioes.forEach(r=>{
-    const o = document.createElement("option");
-    o.value = r;
-    o.textContent = r;
-    sel.appendChild(o);
-  });
-}
-
-document.getElementById("regiaoSelect").addEventListener("change", e=>{
-  const tbody = document.getElementById("tabela");
-  tbody.innerHTML = "";
-
-  dados.filter(d=>d.regiao===e.target.value)
-    .forEach(d=>{
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${d.escola}</td>
-        <td>${d.etapa}</td>
-        <td>${d.ano}</td>
-        <td>${d.vagas}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-});
-
-carregarDados();
-</script>
-
+<script src="script.js"></script>
 </body>
 </html>
