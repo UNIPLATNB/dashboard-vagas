@@ -2,34 +2,14 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Consulta de Vagas – Secretaria de Educação</title>
-
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<title>Consulta de Vagas por Região</title>
 
 <style>
-body {
-  font-family: Arial, sans-serif;
-  margin: 20px;
-}
-h1 {
-  margin-bottom: 10px;
-}
-select {
-  padding: 6px;
-  margin-bottom: 15px;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-th, td {
-  border: 1px solid #ccc;
-  padding: 6px;
-  text-align: left;
-}
-th {
-  background: #f0f0f0;
-}
+body { font-family: Arial, sans-serif; margin: 20px; }
+select { padding: 6px; margin-bottom: 15px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { border: 1px solid #ccc; padding: 6px; }
+th { background: #f2f2f2; }
 </style>
 </head>
 
@@ -37,87 +17,89 @@ th {
 
 <h1>Consulta de vagas por Região</h1>
 
-<label>Região:</label>
 <select id="regiaoSelect">
-  <option value="">Selecione</option>
+  <option value="">Selecione a região</option>
 </select>
 
 <table>
-  <thead>
-    <tr>
-      <th>Unidade Escolar</th>
-      <th>Etapa</th>
-      <th>Ano / Série</th>
-      <th>Vagas</th>
-    </tr>
-  </thead>
-  <tbody id="tabelaDados"></tbody>
+<thead>
+<tr>
+  <th>Unidade Escolar</th>
+  <th>Etapa</th>
+  <th>Ano / Série</th>
+  <th>Vagas</th>
+</tr>
+</thead>
+<tbody id="tabela"></tbody>
 </table>
 
 <script>
-const url = "https://docs.google.com/spreadsheets/d/1n2be7xn-2u-zP1nOT7nKPZZ4_dPqK6k__zgyyhIqZ_w/gviz/tq?tqx=out:json";
+const planilhaId = "1n2be7xn-2u-zP1nOT7nKPZZ4_dPqK6k__zgyyhIqZ_w";
 
-let dados = [];
+const regioes = [
+  "Núcleo Bandeirante",
+  "Candangolândia",
+  "Riacho Fundo I",
+  "Riacho Fundo II"
+];
 
-fetch(url)
-  console.log("Tentando carregar dados da planilha...");
-  .then(res => res.arrayBuffer())
-  .then(buffer => {
-    const wb = XLSX.read(buffer, { type: "array" });
+const dados = [];
 
-    wb.SheetNames.forEach(nomeAba => {
-      const sheet = wb.Sheets[nomeAba];
-      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+function csvUrl(aba) {
+  return `https://docs.google.com/spreadsheets/d/${planilhaId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(aba)}`;
+}
 
-      // Começa na linha 5 (índice 4)
-      for (let i = 4; i < rows.length; i++) {
-        const r = rows[i];
-        const escola = r[1];
-        if (!escola) continue;
+async function carregarDados() {
+  for (const regiao of regioes) {
+    const res = await fetch(csvUrl(regiao));
+    const texto = await res.text();
+    const linhas = texto.split("\n").slice(4);
 
-        const etapas = [
-          { etapa: "Ensino Infantil", ano: r[3], vagas: r[4] },
-          { etapa: "EF Anos Iniciais", ano: r[6], vagas: r[7] },
-          { etapa: "EF Anos Finais", ano: r[9], vagas: r[10] },
-          { etapa: "Ensino Médio", ano: r[12], vagas: r[13] },
-          { etapa: "EJA (Noturno)", ano: r[15], vagas: r[16] }
-        ];
+    linhas.forEach(l => {
+      const c = l.split(",");
 
-        etapas.forEach(e => {
-          dados.push({
-            regiao: nomeAba,
-            escola,
-            etapa: e.etapa,
-            ano: e.ano || "",
-            vagas: e.vagas || 0
-          });
+      const escola = c[1]?.replace(/"/g,"");
+      if (!escola) return;
+
+      const etapas = [
+        { etapa:"Ensino Infantil", ano:c[3], vagas:c[4] },
+        { etapa:"Ensino Fundamental Anos Iniciais", ano:c[6], vagas:c[7] },
+        { etapa:"Ensino Fundamental Anos Finais", ano:c[9], vagas:c[10] },
+        { etapa:"Ensino Médio", ano:c[12], vagas:c[13] },
+        { etapa:"EJA (Noturno)", ano:c[15], vagas:c[16] }
+      ];
+
+      etapas.forEach(e=>{
+        dados.push({
+          regiao,
+          escola,
+          etapa: e.etapa,
+          ano: (e.ano||"").replace(/"/g,""),
+          vagas: e.vagas ? e.vagas.replace(/"/g,"") : ""
         });
-      }
+      });
     });
-console.log("Total de registros lidos:", dados.length);
-    carregarRegioes();
-  });
+  }
 
-function carregarRegioes() {
-  const select = document.getElementById("regiaoSelect");
-  const regioes = [...new Set(dados.map(d => d.regiao))];
+  preencherFiltro();
+}
 
-  regioes.forEach(r => {
-    const opt = document.createElement("option");
-    opt.value = r;
-    opt.textContent = r;
-    select.appendChild(opt);
+function preencherFiltro() {
+  const sel = document.getElementById("regiaoSelect");
+  regioes.forEach(r=>{
+    const o = document.createElement("option");
+    o.value = r;
+    o.textContent = r;
+    sel.appendChild(o);
   });
 }
 
-document.getElementById("regiaoSelect").addEventListener("change", e => {
-  const regiao = e.target.value;
-  const tbody = document.getElementById("tabelaDados");
+document.getElementById("regiaoSelect").addEventListener("change", e=>{
+  const tbody = document.getElementById("tabela");
   tbody.innerHTML = "";
 
-  dados
-    .filter(d => d.regiao === regiao)
-    .forEach(d => {
+  dados.filter(d=>d.regiao===e.target.value)
+    .forEach(d=>{
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${d.escola}</td>
@@ -128,8 +110,9 @@ document.getElementById("regiaoSelect").addEventListener("change", e => {
       tbody.appendChild(tr);
     });
 });
+
+carregarDados();
 </script>
 
 </body>
 </html>
-
