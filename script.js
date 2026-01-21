@@ -1,27 +1,34 @@
-const url = "https://docs.google.com/spreadsheets/d/12Ou7DzGLBmYIxUDJqvgRnVUejheSMTSoD0dtkC_50BE/gviz/tq?tqx=out:json&sheet=dados_site";
+const url =
+  "https://docs.google.com/spreadsheets/d/12Ou7DzGLBmYIxUDJqvgRnVUejheSMTSoD0dtkC_50BE/gviz/tq?tqx=out:json&sheet=dados_site";
 
 let dados = [];
 let grafico;
 
-// Carrega dados da planilha
+// ====== CARREGAMENTO SEGURO DOS DADOS ======
 fetch(url)
   .then(res => res.text())
   .then(text => {
-    const json = JSON.parse(text.substring(47).slice(0, -2));
+    const inicio = text.indexOf("{");
+    const fim = text.lastIndexOf("}");
+    const json = JSON.parse(text.substring(inicio, fim + 1));
 
     dados = json.table.rows
       .map(r => ({
-        regiao: r.c[0]?.v?.trim(),
-        escola: r.c[1]?.v?.trim(),
-        serie: r.c[2]?.v?.trim(),
+        regiao: r.c[0]?.v?.toString().trim(),
+        escola: r.c[1]?.v?.toString().trim(),
+        serie: r.c[2]?.v?.toString().trim(),
         vagas: Number(r.c[3]?.v || 0)
       }))
       .filter(d => d.regiao && d.escola && d.serie);
 
     criarTags();
+  })
+  .catch(err => {
+    document.body.innerHTML =
+      "<h2>Erro ao carregar dados da planilha</h2><pre>" + err + "</pre>";
   });
 
-// Cria TAGS de região
+// ====== TAGS DE REGIÃO ======
 function criarTags() {
   const container = document.getElementById("tagsRegioes");
   const regioes = [...new Set(dados.map(d => d.regiao))];
@@ -48,36 +55,31 @@ function criarTags() {
   });
 }
 
-// Atualiza cards, total e gráfico
+// ====== ATUALIZA CARDS, TOTAL E GRÁFICO ======
 function atualizar(regiao) {
   const filtrados = dados.filter(d => d.regiao === regiao);
   const container = document.getElementById("cardsContainer");
   container.innerHTML = "";
 
-  // AGRUPA POR ESCOLA
   const escolas = {};
   let totalVagas = 0;
 
   filtrados.forEach(d => {
-    if (!escolas[d.escola]) {
-      escolas[d.escola] = [];
-    }
+    if (!escolas[d.escola]) escolas[d.escola] = [];
     escolas[d.escola].push({ serie: d.serie, vagas: d.vagas });
     totalVagas += d.vagas;
   });
 
-  // Atualiza total
   document.getElementById("totalVagas").textContent =
     `Total de vagas na região: ${totalVagas}`;
 
-  // Cria cards
   Object.keys(escolas).forEach(escola => {
     const card = document.createElement("div");
     card.className = "card";
 
-    let htmlSeries = "";
+    let seriesHTML = "";
     escolas[escola].forEach(s => {
-      htmlSeries += `
+      seriesHTML += `
         <div class="serie">
           <span>${s.serie}</span>
           <strong>${s.vagas}</strong>
@@ -87,7 +89,7 @@ function atualizar(regiao) {
 
     card.innerHTML = `
       <h3>${escola}</h3>
-      ${htmlSeries}
+      ${seriesHTML}
     `;
 
     container.appendChild(card);
@@ -96,15 +98,10 @@ function atualizar(regiao) {
   gerarGrafico(filtrados);
 }
 
-// Gráfico
+// ====== GRÁFICO ======
 function gerarGrafico(dadosFiltrados) {
-  const labels = [];
-  const valores = [];
-
-  dadosFiltrados.forEach(d => {
-    labels.push(`${d.escola} - ${d.serie}`);
-    valores.push(d.vagas);
-  });
+  const labels = dadosFiltrados.map(d => `${d.escola} - ${d.serie}`);
+  const valores = dadosFiltrados.map(d => d.vagas);
 
   if (grafico) grafico.destroy();
 
@@ -122,4 +119,9 @@ function gerarGrafico(dadosFiltrados) {
       scales: {
         y: {
           beginAtZero: true,
-          ticks
+          ticks: { stepSize: 1 }
+        }
+      }
+    }
+  });
+}
