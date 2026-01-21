@@ -1,26 +1,47 @@
-const url =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vS_jN8kcgwKuyt0tzJrNaDbrYIWE24WLKwdLSW6TCgFIp7YvV0Nu7Hrhv6fZUBFtwJESKynP5HaaRCs/pub?output=csv"
-  + "&nocache=" + Date.now();
+const planilhaId = "12Ou7DzGLBmYIxUDJqvgRnVUejheSMTSoD0dtkC_50BE";
 
-fetch(url)
-  .then(res => res.text())
-  .then(text => {
-    const linhas = text.split("\n");
-    const container = document.getElementById("cards");
-    container.innerHTML = "";
+const abas = {
+  "Núcleo Bandeirante": "Núcleo Bandeirante",
+  "Candangolândia": "Candangolândia",
+  "Riacho Fundo I": "Riacho Fundo I"
+  "Riacho Fundo II": "Riacho Fundo II"
+};
 
-    // começa a ler a partir da linha 5 (índice 4)
-    linhas.slice(4).forEach(linha => {
-      if (!linha.trim()) return;
+function carregarRegiao(nomeAba) {
+  const url = `https://docs.google.com/spreadsheets/d/${planilhaId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(nomeAba)}`;
 
-      const colunas = linha.split(",");
-      const escola = colunas[0];
+  fetch(url)
+    .then(res => res.text())
+    .then(text => {
+      const json = JSON.parse(text.substr(47).slice(0, -2));
+      const linhas = json.table.rows;
 
-      if (!escola) return;
+      const container = document.getElementById("cards");
+      container.innerHTML = "";
 
-      const card = document.createElement("div");
-      card.className = "card";
+      linhas.slice(4).forEach(linha => {
+        if (!linha.c[0]) return;
 
-      let html = `<h2>${escola}</h2>`;
+        const escola = linha.c[0].v;
+        const card = document.createElement("div");
+        card.className = "card";
 
-      // percorre etapas + va
+        let html = `<h2>${escola}</h2>`;
+
+        for (let i = 1; i < linha.c.length; i += 2) {
+          const vagas = linha.c[i]?.v;
+          if (vagas && vagas > 0) {
+            html += `<p>Vagas: ${vagas}</p>`;
+          }
+        }
+
+        card.innerHTML = html;
+        container.appendChild(card);
+      });
+    });
+}
+
+const select = document.getElementById("regiao");
+select.addEventListener("change", () => carregarRegiao(select.value));
+
+carregarRegiao(select.value);
