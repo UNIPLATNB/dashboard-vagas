@@ -1,28 +1,37 @@
-const CSV_URL =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vS_jN8kcgwKuyt0tzJrNaDbrYIWE24WLKwdLSW6TCgFIp7YvV0Nu7Hrhv6fZUBFtwJESKynP5HaaRCs/pub?gid=1126119889&single=true&output=csv";
+function normalizar(texto) {
+  return texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "")
+    .replace(/[^a-z]/g, "");
+}
 
-const regiaoSelect = document.getElementById("regiaoSelect");
-const cardsContainer = document.getElementById("cardsContainer");
+function parseCSVComCabecalho(csv) {
+  const linhas = csv.trim().split("\n");
 
-let dadosGlobais = [];
+  const cabecalhoOriginal = linhas.shift().split(",");
+  const cabecalho = cabecalhoOriginal.map(h => normalizar(h));
 
-// =======================
-// CARREGAR CSV
-// =======================
-fetch(CSV_URL)
-  .then(r => r.text())
-  .then(csv => {
-    dadosGlobais = parseCSVComCabecalho(csv);
-    preencherFiltro(dadosGlobais);
-    montarCards(dadosGlobais);
-  })
-  .catch(err => {
-    console.error(err);
-    cardsContainer.innerHTML = "<p>Erro ao carregar os dados.</p>";
+  return linhas.map(linha => {
+    const valores = [];
+    let atual = "";
+    let aspas = false;
+
+    for (let c of linha) {
+      if (c === '"') aspas = !aspas;
+      else if (c === "," && !aspas) {
+        valores.push(atual);
+        atual = "";
+      } else atual += c;
+    }
+    valores.push(atual);
+
+    const obj = {};
+    cabecalho.forEach((col, i) => {
+      obj[col] = (valores[i] || "").replace(/^"|"$/g, "").trim();
+    });
+
+    return obj;
   });
-
-// =======================
-// CSV → OBJETOS
-// =======================
-function parseCSVCo
-
+}
