@@ -3,7 +3,7 @@ const ABA = "dados_site";
 
 const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${ABA}`;
 
-/* ORDEM OFICIAL DAS SÉRIES */
+/* ORDEM PADRÃO */
 const ordemSeries = [
   "1º período",
   "2º período",
@@ -15,13 +15,20 @@ const ordemSeries = [
   "6º ano",
   "7º ano",
   "8º ano",
-  "9º ano",
-  "1ª série",
-  "2ª série",
-  "3ª série"
+  "9º ano"
 ];
 
 let dados = [];
+
+/* ===== NORMALIZA TEXTO ===== */
+function normalizarSerie(texto) {
+  return texto
+    .toLowerCase()
+    .replace("°", "º")
+    .replace("periodo", "período")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 /* ===== BUSCAR PLANILHA ===== */
 fetch(URL)
@@ -32,20 +39,20 @@ fetch(URL)
     dados = json.table.rows.map(r => ({
       regiao: r.c[0]?.v || "",
       escola: r.c[1]?.v || "",
-      serie: r.c[2]?.v || "",
+      serieOriginal: r.c[2]?.v || "",
+      serie: normalizarSerie(r.c[2]?.v || ""),
       vagas: Number(r.c[3]?.v) || 0
     }));
 
     iniciar();
-  })
-  .catch(err => console.error("Erro ao carregar planilha:", err));
+  });
 
 /* ===== INICIAR ===== */
 function iniciar() {
   criarTagsRegioes();
 }
 
-/* ===== TAGS DE REGIÃO ===== */
+/* ===== TAGS ===== */
 function criarTagsRegioes() {
   const div = document.getElementById("tagsRegioes");
   div.innerHTML = "";
@@ -66,12 +73,10 @@ function criarTagsRegioes() {
     div.appendChild(btn);
   });
 
-  if (regioes.length > 0) {
-    renderizar(regioes[0]);
-  }
+  if (regioes.length > 0) renderizar(regioes[0]);
 }
 
-/* ===== RENDERIZAR CARDS ===== */
+/* ===== RENDER ===== */
 function renderizar(regiaoSelecionada) {
   const container = document.getElementById("cardsContainer");
   container.innerHTML = "";
@@ -84,28 +89,9 @@ function renderizar(regiaoSelecionada) {
   filtrados.forEach(d => {
     totalVagas += d.vagas;
 
-    if (!escolas[d.escola]) {
-      escolas[d.escola] = [];
-    }
+    if (!escolas[d.escola]) escolas[d.escola] = [];
 
-    escolas[d.escola].push({
-      serie: d.serie.toString().trim(),
-      vagas: d.vagas
-    });
-  });
-
-  /* ORDENA AS SÉRIES DENTRO DE CADA ESCOLA */
-  Object.values(escolas).forEach(lista => {
-    lista.sort((a, b) => {
-      const ia = ordemSeries.indexOf(a.serie);
-      const ib = ordemSeries.indexOf(b.serie);
-
-      if (ia === -1 && ib === -1) return a.serie.localeCompare(b.serie);
-      if (ia === -1) return 1;
-      if (ib === -1) return -1;
-
-      return ia - ib;
-    });
+    escolas[d.escola].push(d);
   });
 
   document.getElementById("totalVagas").textContent =
@@ -117,3 +103,27 @@ function renderizar(regiaoSelecionada) {
 
     const titulo = document.createElement("h3");
     titulo.textContent = escola;
+    card.appendChild(titulo);
+
+    escolas[escola]
+      .sort((a, b) => {
+        const ia = ordemSeries.indexOf(a.serie);
+        const ib = ordemSeries.indexOf(b.serie);
+        if (ia === -1 && ib === -1) return a.serie.localeCompare(b.serie);
+        if (ia === -1) return 1;
+        if (ib === -1) return -1;
+        return ia - ib;
+      })
+      .forEach(item => {
+        const linha = document.createElement("div");
+        linha.className = "linha";
+        linha.innerHTML = `
+          <span>${item.serieOriginal}</span>
+          <span>${item.vagas}</span>
+        `;
+        card.appendChild(linha);
+      });
+
+    container.appendChild(card);
+  });
+}
