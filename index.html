@@ -4,20 +4,54 @@
   <meta charset="UTF-8">
   <title>Gestão de Vagas – CRE</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    select, table { margin-top: 15px; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
-    th { background: #f0f0f0; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+
+    h2 {
+      margin-bottom: 10px;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 6px 14px;
+      margin: 4px;
+      border-radius: 18px;
+      background: #e0e0e0;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .tag.active {
+      background: #1976d2;
+      color: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 6px;
+      text-align: center;
+    }
+
+    th {
+      background: #f2f2f2;
+    }
   </style>
 </head>
 <body>
 
 <h2>Gestão de Vagas por Região</h2>
 
-<label>Selecione a Região:</label>
-<select id="regiaoSelect"></select>
+<div id="tagsRegioes"></div>
 
 <table>
   <thead>
@@ -30,7 +64,7 @@
   <tbody id="tabelaDados"></tbody>
 </table>
 
-<canvas id="graficoVagas" height="100"></canvas>
+<canvas id="graficoVagas" height="120"></canvas>
 
 <script src="script.js"></script>
 </body>
