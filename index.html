@@ -1,155 +1,141 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <title>Vagas disponíveis por escola</title>
+<meta charset="UTF-8">
+<title>Vagas disponíveis por escola</title>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      padding: 20px;
-    }
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f6f8;
+  padding: 20px;
+}
 
-    h1 {
-      text-align: center;
-    }
+h1 {
+  text-align: center;
+}
 
-    #totalVagas {
-      text-align: center;
-      font-size: 18px;
-      font-weight: bold;
-      margin: 15px 0;
-    }
+#totalVagas {
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+  margin: 15px 0 25px;
+}
 
-    /* TAGS DE REGIÃO */
-    #tagsRegioes {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 25px;
-    }
+/* TAGS DE REGIÃO */
+#tagsRegioes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 30px;
+}
 
-    .tag {
-      background: #e0e0e0;
-      border: none;
-      padding: 8px 14px;
-      border-radius: 20px;
-      cursor: pointer;
-      font-weight: bold;
-    }
+.tag {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: none;
+  background: #e0e0e0;
+  cursor: pointer;
+  font-weight: bold;
+}
 
-    .tag.ativa {
-      background: #1976d2;
-      color: #fff;
-    }
+.tag.ativa {
+  background: #1976d2;
+  color: #fff;
+}
 
-    /* CARDS */
-    #cardsContainer {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 20px;
-    }
+/* CARDS */
+#cardsContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
 
-    .card {
-      background: #fff;
-      border-radius: 10px;
-      padding: 15px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-    }
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 15px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
 
-    .card h3 {
-      margin-top: 0;
-      font-size: 16px;
-      margin-bottom: 10px;
-    }
+.card h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
 
-    .serie {
-      font-size: 14px;
-      display: flex;
-      justify-content: space-between;
-      padding: 3px 0;
-      border-bottom: 1px solid #eee;
-    }
+.linha {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  padding: 4px 0;
+  border-bottom: 1px solid #eee;
+}
 
-    .serie:last-child {
-      border-bottom: none;
-    }
+.linha:last-child {
+  border-bottom: none;
+}
 
-    canvas {
-      margin-top: 30px;
-      background: #fff;
-      padding: 15px;
-      border-radius: 10px;
-    }
-  </style>
+canvas {
+  margin-top: 40px;
+  background: #fff;
+  padding: 15px;
+  border-radius: 12px;
+}
+</style>
 </head>
 
 <body>
 
-  <h1>Vagas disponíveis por escola</h1>
+<h1>Vagas disponíveis por escola</h1>
 
-  <div id="totalVagas">Total de vagas: 0</div>
+<div id="totalVagas">Total de vagas: 0</div>
+<div id="tagsRegioes"></div>
+<div id="cardsContainer"></div>
 
-  <div id="tagsRegioes"></div>
-
-  <div id="cardsContainer"></div>
-
-  <canvas id="graficoVagas" height="120"></canvas>
+<canvas id="graficoVagas" height="120"></canvas>
 
 <script>
-/* ================= CONFIGURAÇÃO ================= */
-
-// ID da sua planilha
+/* ================= CONFIG ================= */
 const SHEET_ID = "12Ou7DzGLBmYIxUDJqvgRnVUejheSMTSoD0dtkC_50BE";
-
-// NOME EXATO DA ABA
 const ABA = "dados_site";
-
-// URL pública da planilha
 const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${ABA}`;
 
 let dados = [];
 let grafico = null;
 
-/* ================= BUSCAR DADOS ================= */
-
+/* ================= BUSCAR PLANILHA ================= */
 fetch(URL)
   .then(res => res.text())
   .then(text => {
     const json = JSON.parse(text.substring(47).slice(0, -2));
-    const cols = json.table.cols.map(c => c.label);
+    const colunas = json.table.cols.map(c => c.label);
 
-    dados = json.table.rows.map(r => {
+    dados = json.table.rows.map(linha => {
       const obj = {};
-      r.c.forEach((cell, i) => {
-        obj[cols[i]] = cell ? cell.v : 0;
+      linha.c.forEach((cel, i) => {
+        obj[colunas[i]] = cel ? cel.v : 0;
       });
       return obj;
     });
 
     iniciar();
   })
-  .catch(err => {
-    console.error("Erro ao carregar planilha", err);
-  });
+  .catch(err => console.error("Erro ao carregar dados:", err));
 
 /* ================= INICIAR ================= */
-
 function iniciar() {
   criarTagsRegioes();
 }
 
-/* ================= REGIÕES ================= */
-
+/* ================= TAGS ================= */
 function criarTagsRegioes() {
-  const container = document.getElementById("tagsRegioes");
-  container.innerHTML = "";
+  const div = document.getElementById("tagsRegioes");
+  div.innerHTML = "";
 
-  const regioes = [...new Set(dados.map(d => d.Região))];
+  const regioes = [...new Set(dados.map(d => d["Região"]))];
 
   regioes.forEach((regiao, i) => {
     const btn = document.createElement("button");
@@ -162,86 +148,12 @@ function criarTagsRegioes() {
       renderizar(regiao);
     };
 
-    container.appendChild(btn);
+    div.appendChild(btn);
   });
 
   renderizar(regioes[0]);
 }
 
 /* ================= RENDER ================= */
-
-function renderizar(regiao) {
-  const container = document.getElementById("cardsContainer");
-  container.innerHTML = "";
-
-  const filtrados = dados.filter(d => d.Região === regiao);
-
-  let totalVagas = 0;
-
-  const escolas = {};
-
-  filtrados.forEach(d => {
-    const escola = d.Escola;
-    const serie = d["Ano/Série"];
-    const vagas = Number(d.Vagas) || 0;
-
-    totalVagas += vagas;
-
-    if (!escolas[escola]) escolas[escola] = [];
-    escolas[escola].push({ serie, vagas });
-  });
-
-  document.getElementById("totalVagas").textContent =
-    `Total de vagas: ${totalVagas}`;
-
-  Object.keys(escolas).forEach(escola => {
-    const card = document.createElement("div");
-    card.className = "card";
-
-    const titulo = document.createElement("h3");
-    titulo.textContent = escola;
-    card.appendChild(titulo);
-
-    escolas[escola].forEach(item => {
-      const linha = document.createElement("div");
-      linha.className = "serie";
-      linha.innerHTML = `<span>${item.serie}</span><span>${item.vagas}</span>`;
-      card.appendChild(linha);
-    });
-
-    container.appendChild(card);
-  });
-
-  desenharGrafico(escolas);
-}
-
-/* ================= GRÁFICO ================= */
-
-function desenharGrafico(escolas) {
-  const labels = [];
-  const valores = [];
-
-  Object.keys(escolas).forEach(escola => {
-    labels.push(escola);
-    valores.push(
-      escolas[escola].reduce((s, i) => s + i.vagas, 0)
-    );
-  });
-
-  if (grafico) grafico.destroy();
-
-  grafico = new Chart(document.getElementById("graficoVagas"), {
-    type: "bar",
-    data: {
-      labels,
-      datasets: [{
-        label: "Total de vagas por escola",
-        data: valores
-      }]
-    }
-  });
-}
-</script>
-
-</body>
-</html>
+function renderizar(regiaoSelecionada) {
+  c
