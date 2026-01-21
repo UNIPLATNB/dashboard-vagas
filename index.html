@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <title>Vagas disponíveis por escola</title>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -44,7 +42,7 @@ h1 {
 
 .tag.ativa {
   background: #1976d2;
-  color: #fff;
+  color: white;
 }
 
 /* CARDS */
@@ -55,14 +53,14 @@ h1 {
 }
 
 .card {
-  background: #fff;
+  background: white;
   border-radius: 12px;
   padding: 15px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
 .card h3 {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   font-size: 16px;
 }
 
@@ -77,13 +75,6 @@ h1 {
 .linha:last-child {
   border-bottom: none;
 }
-
-canvas {
-  margin-top: 40px;
-  background: #fff;
-  padding: 15px;
-  border-radius: 12px;
-}
 </style>
 </head>
 
@@ -95,18 +86,15 @@ canvas {
 <div id="tagsRegioes"></div>
 <div id="cardsContainer"></div>
 
-<canvas id="graficoVagas" height="120"></canvas>
-
 <script>
-/* ================= CONFIG ================= */
+/* ===== CONFIGURAÇÃO ===== */
 const SHEET_ID = "12Ou7DzGLBmYIxUDJqvgRnVUejheSMTSoD0dtkC_50BE";
 const ABA = "dados_site";
 const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${ABA}`;
 
 let dados = [];
-let grafico = null;
 
-/* ================= BUSCAR PLANILHA ================= */
+/* ===== BUSCAR PLANILHA ===== */
 fetch(URL)
   .then(res => res.text())
   .then(text => {
@@ -116,21 +104,21 @@ fetch(URL)
     dados = json.table.rows.map(linha => {
       const obj = {};
       linha.c.forEach((cel, i) => {
-        obj[colunas[i]] = cel ? cel.v : 0;
+        obj[colunas[i]] = cel && cel.v !== null ? cel.v : 0;
       });
       return obj;
     });
 
     iniciar();
   })
-  .catch(err => console.error("Erro ao carregar dados:", err));
+  .catch(err => console.error("Erro ao carregar planilha:", err));
 
-/* ================= INICIAR ================= */
+/* ===== INICIAR ===== */
 function iniciar() {
   criarTagsRegioes();
 }
 
-/* ================= TAGS ================= */
+/* ===== TAGS DE REGIÃO ===== */
 function criarTagsRegioes() {
   const div = document.getElementById("tagsRegioes");
   div.innerHTML = "";
@@ -154,6 +142,52 @@ function criarTagsRegioes() {
   renderizar(regioes[0]);
 }
 
-/* ================= RENDER ================= */
+/* ===== RENDERIZAR CARDS ===== */
 function renderizar(regiaoSelecionada) {
-  c
+  const container = document.getElementById("cardsContainer");
+  container.innerHTML = "";
+
+  const filtrados = dados.filter(d => d["Região"] === regiaoSelecionada);
+
+  const escolas = {};
+  let totalVagas = 0;
+
+  filtrados.forEach(d => {
+    const escola = d["Escola"];
+    const serie = d["Série"];
+    const vagas = Number(d["Vagas"]) || 0;
+
+    totalVagas += vagas;
+
+    if (!escolas[escola]) escolas[escola] = [];
+    escolas[escola].push({ serie, vagas });
+  });
+
+  document.getElementById("totalVagas").textContent =
+    `Total de vagas: ${totalVagas}`;
+
+  Object.keys(escolas).forEach(escola => {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const titulo = document.createElement("h3");
+    titulo.textContent = escola;
+    card.appendChild(titulo);
+
+    escolas[escola].forEach(item => {
+      const linha = document.createElement("div");
+      linha.className = "linha";
+      linha.innerHTML = `
+        <span>${item.serie}</span>
+        <span>${item.vagas}</span>
+      `;
+      card.appendChild(linha);
+    });
+
+    container.appendChild(card);
+  });
+}
+</script>
+
+</body>
+</html>
