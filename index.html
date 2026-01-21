@@ -1,193 +1,21 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<title>Vagas disponíveis por escola</title>
-
-<style>
-body {
-  font-family: Arial, sans-serif;
-  background: #f4f6f8;
-  padding: 20px;
-}
-
-h1 {
-  text-align: center;
-}
-
-#totalVagas {
-  text-align: center;
-  font-size: 18px;
-  font-weight: bold;
-  margin: 15px 0 25px;
-}
-
-/* TAGS DE REGIÃO */
-#tagsRegioes {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 30px;
-}
-
-.tag {
-  padding: 8px 16px;
-  border-radius: 20px;
-  border: none;
-  background: #e0e0e0;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.tag.ativa {
-  background: #1976d2;
-  color: white;
-}
-
-/* CARDS */
-#cardsContainer {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-}
-
-.card {
-  background: white;
-  border-radius: 12px;
-  padding: 15px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-}
-
-.card h3 {
-  margin: 0 0 12px;
-  font-size: 16px;
-}
-
-.linha {
-  display: flex;
-  justify-content: space-between;
-  font-size: 14px;
-  padding: 4px 0;
-  border-bottom: 1px solid #eee;
-}
-
-.linha:last-child {
-  border-bottom: none;
-}
-</style>
+  <meta charset="UTF-8">
+  <title>Vagas disponíveis por escola</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<h1>Vagas disponíveis por escola</h1>
+  <h1>Vagas disponíveis por escola</h1>
 
-<div id="totalVagas">Total de vagas: 0</div>
-<div id="tagsRegioes"></div>
-<div id="cardsContainer"></div>
+  <div id="totalVagas">Total de vagas: 0</div>
 
-<script>
-/* ===== CONFIGURAÇÃO ===== */
-const SHEET_ID = "12Ou7DzGLBmYIxUDJqvgRnVUejheSMTSoD0dtkC_50BE";
-const ABA = "dados_site";
-const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${ABA}`;
+  <div id="tagsRegioes"></div>
 
-let dados = [];
+  <div id="cardsContainer"></div>
 
-/* ===== BUSCAR PLANILHA ===== */
-fetch(URL)
-  .then(res => res.text())
-  .then(text => {
-    const json = JSON.parse(text.substring(47).slice(0, -2));
-    const colunas = json.table.cols.map(c => c.label);
-
-    dados = json.table.rows.map(linha => {
-      const obj = {};
-      linha.c.forEach((cel, i) => {
-        obj[colunas[i]] = cel && cel.v !== null ? cel.v : 0;
-      });
-      return obj;
-    });
-
-    iniciar();
-  })
-  .catch(err => console.error("Erro ao carregar planilha:", err));
-
-/* ===== INICIAR ===== */
-function iniciar() {
-  criarTagsRegioes();
-}
-
-/* ===== TAGS DE REGIÃO ===== */
-function criarTagsRegioes() {
-  const div = document.getElementById("tagsRegioes");
-  div.innerHTML = "";
-
-  const regioes = [...new Set(dados.map(d => d["Região"]))];
-
-  regioes.forEach((regiao, i) => {
-    const btn = document.createElement("button");
-    btn.className = "tag" + (i === 0 ? " ativa" : "");
-    btn.textContent = regiao;
-
-    btn.onclick = () => {
-      document.querySelectorAll(".tag").forEach(t => t.classList.remove("ativa"));
-      btn.classList.add("ativa");
-      renderizar(regiao);
-    };
-
-    div.appendChild(btn);
-  });
-
-  renderizar(regioes[0]);
-}
-
-/* ===== RENDERIZAR CARDS ===== */
-function renderizar(regiaoSelecionada) {
-  const container = document.getElementById("cardsContainer");
-  container.innerHTML = "";
-
-  const filtrados = dados.filter(d => d["Região"] === regiaoSelecionada);
-
-  const escolas = {};
-  let totalVagas = 0;
-
-  filtrados.forEach(d => {
-    const escola = d["Escola"];
-    const serie = d["Série"];
-    const vagas = Number(d["Vagas"]) || 0;
-
-    totalVagas += vagas;
-
-    if (!escolas[escola]) escolas[escola] = [];
-    escolas[escola].push({ serie, vagas });
-  });
-
-  document.getElementById("totalVagas").textContent =
-    `Total de vagas: ${totalVagas}`;
-
-  Object.keys(escolas).forEach(escola => {
-    const card = document.createElement("div");
-    card.className = "card";
-
-    const titulo = document.createElement("h3");
-    titulo.textContent = escola;
-    card.appendChild(titulo);
-
-    escolas[escola].forEach(item => {
-      const linha = document.createElement("div");
-      linha.className = "linha";
-      linha.innerHTML = `
-        <span>${item.serie}</span>
-        <span>${item.vagas}</span>
-      `;
-      card.appendChild(linha);
-    });
-
-    container.appendChild(card);
-  });
-}
-</script>
-
+  <script src="script.js"></script>
 </body>
 </html>
