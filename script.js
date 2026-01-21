@@ -9,15 +9,38 @@ function carregarRegiao(nomeAba) {
       const json = JSON.parse(text.substring(47, text.length - 2));
       const rows = json.table.rows;
 
+      const cabecalho = rows[3].c; // linha 4
       const container = document.getElementById("cards");
       container.innerHTML = "";
 
-      // começa após o cabeçalho (linha 5)
       for (let i = 4; i < rows.length; i++) {
-        const c = rows[i].c;
+        const linha = rows[i].c;
+        if (!linha || !linha[1]?.v) continue;
 
-        if (!c || !c[1] || !c[1].v) continue; // coluna B
-
-        const escola = c[1].v;
+        const escola = linha[1].v;
         const card = document.createElement("div");
-        card.cla
+        card.className = "card";
+
+        let html = `<h2>${escola}</h2>`;
+
+        // percorre TODAS as colunas procurando séries
+        for (let col = 3; col < cabecalho.length; col++) {
+          const nomeSerie = cabecalho[col]?.v;
+
+          if (nomeSerie) {
+            const vagas = linha[col + 1]?.v ?? 0;
+            html += `<p><strong>${nomeSerie}:</strong> ${vagas} vaga(s)</p>`;
+          }
+        }
+
+        card.innerHTML = html;
+        container.appendChild(card);
+      }
+    })
+    .catch(err => console.error("Erro:", err));
+}
+
+const select = document.getElementById("regiao");
+select.addEventListener("change", () => carregarRegiao(select.value));
+
+carregarRegiao(select.value);
