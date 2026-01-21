@@ -1,13 +1,15 @@
-const url = "COLE_AQUI_O_LINK_DO_CSV";
+const url =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vS_jN8kcgwKuyt0tzJrNaDbrYIWE24WLKwdLSW6TCgFIp7YvV0Nu7Hrhv6fZUBFtwJESKynP5HaaRCs/pub?output=csv"
+  + "&nocache=" + Date.now();
 
 fetch(url)
   .then(res => res.text())
   .then(text => {
     const linhas = text.split("\n");
-    const cabecalho = linhas[3].split(",");
-
     const container = document.getElementById("cards");
+    container.innerHTML = "";
 
+    // começa a ler a partir da linha 5 (índice 4)
     linhas.slice(4).forEach(linha => {
       if (!linha.trim()) return;
 
@@ -21,13 +23,4 @@ fetch(url)
 
       let html = `<h2>${escola}</h2>`;
 
-      for (let i = 1; i < cabecalho.length; i += 2) {
-        const etapa = cabecalho[i];
-        const vagas = colunas[i] || "0";
-        html += `<p><strong>${etapa}:</strong> ${vagas}</p>`;
-      }
-
-      card.innerHTML = html;
-      container.appendChild(card);
-    });
-  });
+      // percorre etapas + va
