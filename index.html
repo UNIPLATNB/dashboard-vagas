@@ -2,19 +2,22 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Gestão de Vagas – CRE</title>
+  <title>Vagas disponíveis por escola</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
     body {
       font-family: Arial, sans-serif;
+      background: #f5f5f5;
       padding: 20px;
     }
 
     h2 {
-      margin-bottom: 10px;
+      text-align: center;
+      margin-bottom: 15px;
     }
 
+    /* TAGS */
     .tag {
       display: inline-block;
       padding: 6px 14px;
@@ -30,42 +33,24 @@
       color: #fff;
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
+    /* GRID DE CARDS */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
     }
 
-    th, td {
-      border: 1px solid #ccc;
-      padding: 6px;
-      text-align: center;
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     }
 
-    th {
-      background: #f2f2f2;
+    .card h3 {
+      margin: 0 0 10px 0;
+      font-size: 16px;
     }
-  </style>
-</head>
-<body>
 
-<h2>Gestão de Vagas por Região</h2>
-
-<div id="tagsRegioes"></div>
-
-<table>
-  <thead>
-    <tr>
-      <th>Escola</th>
-      <th>Ano/Série</th>
-      <th>Vagas</th>
-    </tr>
-  </thead>
-  <tbody id="tabelaDados"></tbody>
-</table>
-
-<canvas id="graficoVagas" height="120"></canvas>
-
-<script src="script.js"></script>
-</body>
-</html>
+    .li
