@@ -1,117 +1,132 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Dashboard de Vagas Escolares</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-    }
-    select {
-      padding: 6px;
-      font-size: 16px;
-      margin-bottom: 20px;
-    }
-    .escola {
-      border: 1px solid #ccc;
-      padding: 12px;
-      margin-bottom: 15px;
-      border-radius: 6px;
-    }
-    .etapa {
-      margin-left: 15px;
-      margin-top: 5px;
-    }
-    .vaga {
-      font-weight: bold;
-      color: green;
-    }
-    .sem-vaga {
-      color: #999;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Consulta de Vagas – Secretaria de Educação</title>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  margin: 20px;
+}
+h1 {
+  margin-bottom: 10px;
+}
+select {
+  padding: 6px;
+  margin-bottom: 15px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th, td {
+  border: 1px solid #ccc;
+  padding: 6px;
+  text-align: left;
+}
+th {
+  background: #f0f0f0;
+}
+</style>
 </head>
+
 <body>
 
-<h2>Consulta de Vagas por Região</h2>
+<h1>Consulta de vagas por Região</h1>
 
+<label>Região:</label>
 <select id="regiaoSelect">
-  <option value="">Selecione a Região</option>
+  <option value="">Selecione</option>
 </select>
 
-<div id="resultado"></div>
+<table>
+  <thead>
+    <tr>
+      <th>Unidade Escolar</th>
+      <th>Etapa</th>
+      <th>Ano / Série</th>
+      <th>Vagas</th>
+    </tr>
+  </thead>
+  <tbody id="tabelaDados"></tbody>
+</table>
 
 <script>
-const SHEET_ID = "1n2be7xn-2u-zP1nOT7nKPZZ4_dPqK6k__zgyyhIqZ_w";
-const GID = "0"; // se for a primeira aba
+const url = "https://docs.google.com/spreadsheets/d/1n2be7xn-2u-zP1nOT7nKPZZ4_dPqK6k__zgyyhIqZ_w/export?format=xlsx";
 
-const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${GID}`;
+let dados = [];
 
-fetch(URL)
-  .then(res => res.text())
-  .then(text => {
-    const json = JSON.parse(text.substring(47).slice(0, -2));
-    const rows = json.table.rows;
+fetch(url)
+  .then(res => res.arrayBuffer())
+  .then(buffer => {
+    const wb = XLSX.read(buffer, { type: "array" });
 
-    const dados = rows.map(r => r.c.map(c => c ? c.v : ""));
+    wb.SheetNames.forEach(nomeAba => {
+      const sheet = wb.Sheets[nomeAba];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-    const regioes = [...new Set(dados.map(l => l[0]).filter(Boolean))];
+      // Começa na linha 5 (índice 4)
+      for (let i = 4; i < rows.length; i++) {
+        const r = rows[i];
+        const escola = r[1];
+        if (!escola) continue;
 
-    const select = document.getElementById("regiaoSelect");
+        const etapas = [
+          { etapa: "Ensino Infantil", ano: r[3], vagas: r[4] },
+          { etapa: "EF Anos Iniciais", ano: r[6], vagas: r[7] },
+          { etapa: "EF Anos Finais", ano: r[9], vagas: r[10] },
+          { etapa: "Ensino Médio", ano: r[12], vagas: r[13] },
+          { etapa: "EJA (Noturno)", ano: r[15], vagas: r[16] }
+        ];
 
-    regioes.forEach(r => {
-      const opt = document.createElement("option");
-      opt.value = r;
-      opt.textContent = r;
-      select.appendChild(opt);
-    });
-
-    select.addEventListener("change", () => render(dados, select.value));
-  });
-
-function render(dados, regiao) {
-  const container = document.getElementById("resultado");
-  container.innerHTML = "";
-
-  if (!regiao) return;
-
-  const filtrados = dados.filter(l => l[0] === regiao);
-
-  filtrados.forEach(linha => {
-    const escola = linha[1];
-
-    const etapas = [
-      { nome: "Ensino Infantil", anos: linha[3], vagas: linha[4] },
-      { nome: "Ensino Fundamental Anos Iniciais", anos: linha[6], vagas: linha[7] },
-      { nome: "Ensino Fundamental Anos Finais", anos: linha[9], vagas: linha[10] },
-      { nome: "Ensino Médio", anos: linha[12], vagas: linha[13] },
-      { nome: "EJA (NOTURNO)", anos: linha[15], vagas: linha[16] }
-    ];
-
-    const div = document.createElement("div");
-    div.className = "escola";
-    div.innerHTML = `<h3>${escola}</h3>`;
-
-    etapas.forEach(e => {
-      if (e.anos) {
-        const vagasTxt = e.vagas > 0
-          ? `<span class="vaga">${e.vagas} vaga(s)</span>`
-          : `<span class="sem-vaga">0 vagas</span>`;
-
-        div.innerHTML += `
-          <div class="etapa">
-            <strong>${e.nome}</strong><br>
-            Anos/Séries: ${e.anos}<br>
-            ${vagasTxt}
-          </div>
-        `;
+        etapas.forEach(e => {
+          dados.push({
+            regiao: nomeAba,
+            escola,
+            etapa: e.etapa,
+            ano: e.ano || "",
+            vagas: e.vagas || 0
+          });
+        });
       }
     });
 
-    container.appendChild(div);
+    carregarRegioes();
+  });
+
+function carregarRegioes() {
+  const select = document.getElementById("regiaoSelect");
+  const regioes = [...new Set(dados.map(d => d.regiao))];
+
+  regioes.forEach(r => {
+    const opt = document.createElement("option");
+    opt.value = r;
+    opt.textContent = r;
+    select.appendChild(opt);
   });
 }
+
+document.getElementById("regiaoSelect").addEventListener("change", e => {
+  const regiao = e.target.value;
+  const tbody = document.getElementById("tabelaDados");
+  tbody.innerHTML = "";
+
+  dados
+    .filter(d => d.regiao === regiao)
+    .forEach(d => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${d.escola}</td>
+        <td>${d.etapa}</td>
+        <td>${d.ano}</td>
+        <td>${d.vagas}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+});
 </script>
 
 </body>
