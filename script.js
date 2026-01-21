@@ -1,42 +1,67 @@
-const CSV_URL =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vS_jN8kcgwKuyt0tzJrNaDbrYIWE24WLKwdLSW6TCgFIp7YvV0Nu7Hrhv6fZUBFtwJESKynP5HaaRCs/pub?gid=1126119889&single=true&output=csv";
+const planilhaId = "12Ou7DzGLBmYIxUDJqvgRnVUejheSMTSoD0dtkC_50BE";
 
-const regiaoSelect = document.getElementById("regiaoSelect");
-const cardsContainer = document.getElementById("cardsContainer");
+function carregarRegiao(nomeAba) {
+  const url = `https://docs.google.com/spreadsheets/d/${planilhaId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(nomeAba)}`;
 
-let dados = [];
+  fetch(url)
+    .then(res => res.text())
+    .then(text => {
+      const json = JSON.parse(text.substring(47, text.length - 2));
+      const rows = json.table.rows;
 
-// =======================
-// CARREGAR CSV
-// =======================
-fetch(CSV_URL)
-  .then(r => r.text())
-  .then(csv => {
-    dados = parseCSV(csv);
-    carregarRegioes();
-    montarCards(dados);
-  })
-  .catch(err => {
-    console.error(err);
-    cardsContainer.innerHTML = "<p>Erro ao carregar dados.</p>";
-  });
+      const container = document.getElementById("cards");
+      container.innerHTML = "";
 
-// =======================
-// PARSER CSV (AUTO ; ou ,)
-// =======================
-function parseCSV(csv) {
-  const linhas = csv.trim().split("\n");
-  const separador = linhas[0].includes(";") ? ";" : ",";
+      let escolaAtual = null;
 
-  linhas.shift(); // remove cabeçalho
+      // começa após o cabeçalho (linha 5)
+      for (let i = 4; i < rows.length; i++) {
+        const c = rows[i].c;
+        if (!c) continue;
 
-  return linhas.map(l => {
-    const cols = l
-      .split(separador)
-      .map(c => c.replace(/^"|"$/g, "").trim());
+        // coluna B – escola
+        if (c[1] && c[1].v) {
+          escolaAtual = c[1].v;
+        }
 
-    return {
-      regiao: cols[0] || "",
-      escola: cols[1] || "",
-      serie: cols[2] || "",
-      vagas: N
+        // se ainda não tem escola, ignora
+        if (!escolaAtual) continue;
+
+        const dados = [
+          { serie: c[3]?.v, vagas: c[4]?.v },   // D / E
+          { serie: c[6]?.v, vagas: c[7]?.v },   // G / H
+          { serie: c[9]?.v, vagas: c[10]?.v },  // J / K
+          { serie: c[12]?.v, vagas: c[13]?.v }  // M / N
+        ];
+
+        // cria card se ainda não existir
+        let card = document.querySelector(`[data-escola="${escolaAtual}"]`);
+
+        if (!card) {
+          card = document.createElement("div");
+          card.className = "card";
+          card.dataset.escola = escolaAtual;
+          card.innerHTML = `<h2>${escolaAtual}</h2>`;
+          container.appendChild(card);
+        }
+
+        dados.forEach(item => {
+          if (item.serie) {
+            const vagas = item.vagas ?? 0;
+            const p = document.createElement("p");
+            p.innerHTML = `<strong>${item.serie}:</strong> ${vagas} vaga(s)`;
+            card.appendChild(p);
+          }
+        });
+      }
+    })
+    .catch(err => {
+      console.error("Erro ao carregar dados:", err);
+    });
+}
+
+const select = document.getElementById("regiao");
+select.addEventListener("change", () => carregarRegiao(select.value));
+
+// carrega ao abrir
+carregarRegiao(select.value);
