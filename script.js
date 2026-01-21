@@ -1,67 +1,69 @@
-const planilhaId = "12Ou7DzGLBmYIxUDJqvgRnVUejheSMTSoD0dtkC_50BE";
+const url = "https://docs.google.com/spreadsheets/d/12Ou7DzGLBmYIxUDJqvgRnVUejheSMTSoD0dtkC_50BE/gviz/tq?tqx=out:json&sheet=dados_site";
 
-function carregarRegiao(nomeAba) {
-  const url = `https://docs.google.com/spreadsheets/d/${planilhaId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(nomeAba)}`;
+let dados = [];
+let grafico;
 
-  fetch(url)
-    .then(res => res.text())
-    .then(text => {
-      const json = JSON.parse(text.substring(47, text.length - 2));
-      const rows = json.table.rows;
+fetch(url)
+  .then(res => res.text())
+  .then(text => {
+    const json = JSON.parse(text.substring(47).slice(0, -2));
+    dados = json.table.rows.map(r => ({
+      regiao: r.c[0]?.v,
+      escola: r.c[1]?.v,
+      serie: r.c[2]?.v,
+      vagas: r.c[3]?.v
+    }));
 
-      const container = document.getElementById("cards");
-      container.innerHTML = "";
+    carregarRegioes();
+  });
 
-      let escolaAtual = null;
+function carregarRegioes() {
+  const select = document.getElementById("regiaoSelect");
+  const regioes = [...new Set(dados.map(d => d.regiao))];
 
-      // começa após o cabeçalho (linha 5)
-      for (let i = 4; i < rows.length; i++) {
-        const c = rows[i].c;
-        if (!c) continue;
+  regioes.forEach(r => {
+    const opt = document.createElement("option");
+    opt.value = r;
+    opt.textContent = r;
+    select.appendChild(opt);
+  });
 
-        // coluna B – escola
-        if (c[1] && c[1].v) {
-          escolaAtual = c[1].v;
-        }
-
-        // se ainda não tem escola, ignora
-        if (!escolaAtual) continue;
-
-        const dados = [
-          { serie: c[3]?.v, vagas: c[4]?.v },   // D / E
-          { serie: c[6]?.v, vagas: c[7]?.v },   // G / H
-          { serie: c[9]?.v, vagas: c[10]?.v },  // J / K
-          { serie: c[12]?.v, vagas: c[13]?.v }  // M / N
-        ];
-
-        // cria card se ainda não existir
-        let card = document.querySelector(`[data-escola="${escolaAtual}"]`);
-
-        if (!card) {
-          card = document.createElement("div");
-          card.className = "card";
-          card.dataset.escola = escolaAtual;
-          card.innerHTML = `<h2>${escolaAtual}</h2>`;
-          container.appendChild(card);
-        }
-
-        dados.forEach(item => {
-          if (item.serie) {
-            const vagas = item.vagas ?? 0;
-            const p = document.createElement("p");
-            p.innerHTML = `<strong>${item.serie}:</strong> ${vagas} vaga(s)`;
-            card.appendChild(p);
-          }
-        });
-      }
-    })
-    .catch(err => {
-      console.error("Erro ao carregar dados:", err);
-    });
+  select.addEventListener("change", () => atualizar(select.value));
+  atualizar(regioes[0]);
 }
 
-const select = document.getElementById("regiao");
-select.addEventListener("change", () => carregarRegiao(select.value));
+function atualizar(regiao) {
+  const filtrados = dados.filter(d => d.regiao === regiao);
+  const tbody = document.getElementById("tabelaDados");
+  tbody.innerHTML = "";
 
-// carrega ao abrir
-carregarRegiao(select.value);
+  filtrados.forEach(d => {
+    tbody.innerHTML += `
+      <tr>
+        <td>${d.escola}</td>
+        <td>${d.serie}</td>
+        <td>${d.vagas}</td>
+      </tr>
+    `;
+  });
+
+  gerarGrafico(filtrados);
+}
+
+function gerarGrafico(dados) {
+  const labels = dados.map(d => `${d.escola} - ${d.serie}`);
+  const valores = dados.map(d => d.vagas);
+
+  if (grafico) grafico.destroy();
+
+  grafico = new Chart(document.getElementById("graficoVagas"), {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Vagas disponíveis",
+        data: valores
+      }]
+    }
+  });
+}
