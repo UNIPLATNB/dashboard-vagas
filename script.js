@@ -1,5 +1,6 @@
 const planilhaId = "12Ou7DzGLBmYIxUDJqvgRnVUejheSMTSoD0dtkC_50BE";
 
+// pares fixos de colunas (série -> vaga)
 const seriesMap = [
   { serie: 3, vaga: 4 },    // D / E
   { serie: 6, vaga: 7 },    // G / H
@@ -19,19 +20,35 @@ function carregarRegiao(aba) {
   const url = `https://docs.google.com/spreadsheets/d/${planilhaId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(aba)}`;
 
   fetch(url)
-    .then(res => res.text())
+    .then(r => r.text())
     .then(text => {
       const json = JSON.parse(text.substring(47, text.length - 2));
       const rows = json.table.rows;
       const cards = document.getElementById("cards");
       cards.innerHTML = "";
 
+      let cardAtual = null;
+      let htmlAtual = "";
+
       for (let i = 4; i < rows.length; i++) {
         const c = rows[i].c;
-        if (!c || !c[1]?.v) continue;
+        if (!c) continue;
 
-        let html = `<h2>${c[1].v}</h2>`;
+        // se tem escola na coluna B, começa novo card
+        if (typeof c[1]?.v === "string" && c[1].v.trim() !== "") {
+          if (cardAtual) {
+            cardAtual.innerHTML = htmlAtual;
+            cards.appendChild(cardAtual);
+          }
 
+          cardAtual = document.createElement("div");
+          cardAtual.className = "card";
+          htmlAtual = `<h2>${c[1].v}</h2>`;
+        }
+
+        if (!cardAtual) continue;
+
+        // lê séries dessa linha
         seriesMap.forEach(m => {
           const nomeSerie =
             typeof c[m.serie]?.v === "string"
@@ -41,14 +58,15 @@ function carregarRegiao(aba) {
           const vagas = c[m.vaga]?.v ?? 0;
 
           if (nomeSerie) {
-            html += `<p><strong>${nomeSerie}:</strong> ${vagas} vaga(s)</p>`;
+            htmlAtual += `<p><strong>${nomeSerie}:</strong> ${vagas} vaga(s)</p>`;
           }
         });
+      }
 
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = html;
-        cards.appendChild(card);
+      // adiciona o último card
+      if (cardAtual) {
+        cardAtual.innerHTML = htmlAtual;
+        cards.appendChild(cardAtual);
       }
     });
 }
