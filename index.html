@@ -1,227 +1,116 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<title>Dashboard de Vagas – SEEDF</title>
-
-<script src="https://www.gstatic.com/charts/loader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<style>
-body {
-  font-family: Arial, sans-serif;
-  background: #f4f6f9;
-  padding: 20px;
-}
-h1 {
-  text-align: center;
-}
-.kpis, .charts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 15px;
-  margin-bottom: 25px;
-}
-.kpi, .chart-box {
-  background: #fff;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.1);
-}
-.kpi {
-  text-align: center;
-}
-.kpi h2 {
-  margin: 0;
-  color: #005aa7;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-th, td {
-  padding: 8px;
-  border-bottom: 1px solid #ddd;
-  text-align: left;
-}
-th {
-  background: #f0f0f0;
-}
-</style>
+  <meta charset="UTF-8">
+  <title>Dashboard de Vagas Escolares</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    select {
+      padding: 6px;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+    .escola {
+      border: 1px solid #ccc;
+      padding: 12px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+    }
+    .etapa {
+      margin-left: 15px;
+      margin-top: 5px;
+    }
+    .vaga {
+      font-weight: bold;
+      color: green;
+    }
+    .sem-vaga {
+      color: #999;
+    }
+  </style>
 </head>
-
 <body>
 
-<h1>📊 Dashboard de Vagas – Rede Pública de Ensino</h1>
+<h2>Consulta de Vagas por Região</h2>
 
-<div class="kpis">
-  <div class="kpi"><h2 id="totalVagas">0</h2>Total de Vagas</div>
-  <div class="kpi"><h2 id="totalEscolas">0</h2>Unidades Escolares</div>
-  <div class="kpi"><h2 id="totalRegioes">4</h2>Regiões</div>
-  <div class="kpi"><h2 id="ultimaData">–</h2>Última Atualização</div>
-</div>
+<select id="regiaoSelect">
+  <option value="">Selecione a Região</option>
+</select>
 
-<div class="charts">
-  <div class="chart-box"><canvas id="chartEtapa"></canvas></div>
-  <div class="chart-box"><canvas id="chartAno"></canvas></div>
-</div>
-
-<div class="chart-box">
-  <h3 id="tituloTabela">Detalhamento por Ano/Série</h3>
-  <table>
-    <thead>
-      <tr>
-        <th>Ano / Série</th>
-        <th>Vagas</th>
-      </tr>
-    </thead>
-    <tbody id="tabelaAno"></tbody>
-  </table>
-</div>
+<div id="resultado"></div>
 
 <script>
-google.charts.load('current', {packages:['corechart']});
-google.charts.setOnLoadCallback(carregarTudo);
-
 const SHEET_ID = "1n2be7xn-2u-zP1nOT7nKPZZ4_dPqK6k__zgyyhIqZ_w";
+const GID = "0"; // se for a primeira aba
 
-const REGIOES = [
-  "Núcleo Bandeirante",
-  "Candangolândia",
-  "Riacho Fundo I",
-  "Riacho Fundo II"
-];
+const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${GID}`;
 
-const ETAPAS = [
-  { nome: "Ensino Infantil", anoCol: 3, vagasCol: 4 },
-  { nome: "Ensino Fundamental Anos Iniciais", anoCol: 6, vagasCol: 7 },
-  { nome: "Ensino Fundamental Anos Finais", anoCol: 9, vagasCol: 10 },
-  { nome: "Ensino Médio", anoCol: 12, vagasCol: 13 }
-];
+fetch(URL)
+  .then(res => res.text())
+  .then(text => {
+    const json = JSON.parse(text.substring(47).slice(0, -2));
+    const rows = json.table.rows;
 
-let dados = [];
-let charts = {};
+    const dados = rows.map(r => r.c.map(c => c ? c.v : ""));
 
-function carregarTudo() {
-  let carregadas = 0;
+    const regioes = [...new Set(dados.map(l => l[0]).filter(Boolean))];
 
-  REGIOES.forEach(regiao => {
-    const query = new google.visualization.Query(
-      `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=${encodeURIComponent(regiao)}`
-    );
+    const select = document.getElementById("regiaoSelect");
 
-    query.send(resp => {
-      if (!resp.isError()) processarAba(resp.getDataTable(), regiao);
-      carregadas++;
-      if (carregadas === REGIOES.length) atualizarDashboard();
+    regioes.forEach(r => {
+      const opt = document.createElement("option");
+      opt.value = r;
+      opt.textContent = r;
+      select.appendChild(opt);
     });
+
+    select.addEventListener("change", () => render(dados, select.value));
   });
-}
 
-function processarAba(table, regiao) {
-  for (let r = 4; r < table.getNumberOfRows(); r++) {
-    const escola = table.getValue(r, 1);
-    if (!escola) continue;
+function render(dados, regiao) {
+  const container = document.getElementById("resultado");
+  container.innerHTML = "";
 
-    ETAPAS.forEach(e => {
-      const anoSerie = table.getValue(r, e.anoCol);
-      const vagas = Number(table.getValue(r, e.vagasCol)) || 0;
-      const data = table.getValue(r, e.anoCol - 1);
+  if (!regiao) return;
 
-      if (anoSerie && vagas > 0) {
-        dados.push({
-          regiao,
-          escola,
-          etapa: e.nome,
-          anoSerie,
-          vagas,
-          data
-        });
+  const filtrados = dados.filter(l => l[0] === regiao);
+
+  filtrados.forEach(linha => {
+    const escola = linha[1];
+
+    const etapas = [
+      { nome: "Ensino Infantil", anos: linha[3], vagas: linha[4] },
+      { nome: "Ensino Fundamental Anos Iniciais", anos: linha[6], vagas: linha[7] },
+      { nome: "Ensino Fundamental Anos Finais", anos: linha[9], vagas: linha[10] },
+      { nome: "Ensino Médio", anos: linha[12], vagas: linha[13] },
+      { nome: "EJA (NOTURNO)", anos: linha[15], vagas: linha[16] }
+    ];
+
+    const div = document.createElement("div");
+    div.className = "escola";
+    div.innerHTML = `<h3>${escola}</h3>`;
+
+    etapas.forEach(e => {
+      if (e.anos) {
+        const vagasTxt = e.vagas > 0
+          ? `<span class="vaga">${e.vagas} vaga(s)</span>`
+          : `<span class="sem-vaga">0 vagas</span>`;
+
+        div.innerHTML += `
+          <div class="etapa">
+            <strong>${e.nome}</strong><br>
+            Anos/Séries: ${e.anos}<br>
+            ${vagasTxt}
+          </div>
+        `;
       }
     });
-  }
-}
 
-function atualizarDashboard() {
-  document.getElementById("totalVagas").innerText =
-    dados.reduce((s,d)=>s+d.vagas,0);
-
-  document.getElementById("totalEscolas").innerText =
-    new Set(dados.map(d=>d.escola)).size;
-
-  document.getElementById("ultimaData").innerText =
-    dados.map(d=>d.data).filter(Boolean).sort().pop() || "–";
-
-  desenharGraficoEtapa();
-}
-
-function desenharGraficoEtapa() {
-  const agrupado = agrupar(dados, "etapa");
-
-  if (charts.etapa) charts.etapa.destroy();
-
-  charts.etapa = new Chart(document.getElementById("chartEtapa"), {
-    type: "bar",
-    data: {
-      labels: Object.keys(agrupado),
-      datasets: [{
-        label: "Vagas por Etapa",
-        data: Object.values(agrupado)
-      }]
-    },
-    options: {
-      onClick: (_, el) => {
-        if (el.length) {
-          const etapa = charts.etapa.data.labels[el[0].index];
-          detalharEtapa(etapa);
-        }
-      }
-    }
+    container.appendChild(div);
   });
-}
-
-function detalharEtapa(etapa) {
-  const filtrado = dados.filter(d => d.etapa === etapa);
-  const agrupado = agrupar(filtrado, "anoSerie");
-
-  document.getElementById("tituloTabela").innerText =
-    `Detalhamento – ${etapa}`;
-
-  atualizarTabela(agrupado);
-  desenharGraficoAno(agrupado);
-}
-
-function desenharGraficoAno(agrupado) {
-  if (charts.ano) charts.ano.destroy();
-
-  charts.ano = new Chart(document.getElementById("chartAno"), {
-    type: "bar",
-    data: {
-      labels: Object.keys(agrupado),
-      datasets: [{
-        label: "Vagas por Ano/Série",
-        data: Object.values(agrupado)
-      }]
-    }
-  });
-}
-
-function atualizarTabela(agrupado) {
-  const tbody = document.getElementById("tabelaAno");
-  tbody.innerHTML = "";
-
-  Object.entries(agrupado).forEach(([ano, vagas]) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${ano}</td><td>${vagas}</td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-function agrupar(arr, campo) {
-  return arr.reduce((acc, cur) => {
-    acc[cur[campo]] = (acc[cur[campo]] || 0) + cur.vagas;
-    return acc;
-  }, {});
 }
 </script>
 
