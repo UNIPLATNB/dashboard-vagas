@@ -1,24 +1,21 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Vagas disponíveis por escola</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <title>Consulta de Vagas Escolares</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<h1>Vagas disponíveis por escola</h1>
+  <header>
+    <h1>Consulta de Vagas</h1>
+    <select id="regiaoSelect">
+      <option value="">Todas as regiões</option>
+    </select>
+  </header>
 
-<select id="regiao">
-  <option value="Núcleo Bandeirante">Núcleo Bandeirante</option>
-  <option value="Candangolândia">Candangolândia</option>
-  <option value="Riacho Fundo I">Riacho Fundo I</option>
-  <option value="Riacho Fundo II">Riacho Fundo II</option>
-</select>
+  <main id="cardsContainer"></main>
 
-<div id="cards"></div>
-
-<script src="script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
-
