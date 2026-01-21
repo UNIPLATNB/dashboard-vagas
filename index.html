@@ -18,7 +18,7 @@ h1 {
 }
 .kpis, .charts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 15px;
   margin-bottom: 25px;
 }
@@ -27,11 +27,25 @@ h1 {
   padding: 20px;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0,0,0,.1);
+}
+.kpi {
   text-align: center;
 }
 .kpi h2 {
   margin: 0;
   color: #005aa7;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th, td {
+  padding: 8px;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+}
+th {
+  background: #f0f0f0;
 }
 </style>
 </head>
@@ -48,8 +62,21 @@ h1 {
 </div>
 
 <div class="charts">
-  <div class="chart-box"><canvas id="chartRegiao"></canvas></div>
   <div class="chart-box"><canvas id="chartEtapa"></canvas></div>
+  <div class="chart-box"><canvas id="chartAno"></canvas></div>
+</div>
+
+<div class="chart-box">
+  <h3 id="tituloTabela">Detalhamento por Ano/Série</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Ano / Série</th>
+        <th>Vagas</th>
+      </tr>
+    </thead>
+    <tbody id="tabelaAno"></tbody>
+  </table>
 </div>
 
 <script>
@@ -66,11 +93,10 @@ const REGIOES = [
 ];
 
 const ETAPAS = [
-  "Ensino Infantil",
-  "Ensino Fundamental Anos Iniciais",
-  "Ensino Fundamental Anos Finais",
-  "Ensino Médio",
-  "EJA (NOTURNO)"
+  { nome: "Ensino Infantil", anoCol: 3, vagasCol: 4 },
+  { nome: "Ensino Fundamental Anos Iniciais", anoCol: 6, vagasCol: 7 },
+  { nome: "Ensino Fundamental Anos Finais", anoCol: 9, vagasCol: 10 },
+  { nome: "Ensino Médio", anoCol: 12, vagasCol: 13 }
 ];
 
 let dados = [];
@@ -85,9 +111,7 @@ function carregarTudo() {
     );
 
     query.send(resp => {
-      if (!resp.isError()) {
-        processarAba(resp.getDataTable(), regiao);
-      }
+      if (!resp.isError()) processarAba(resp.getDataTable(), regiao);
       carregadas++;
       if (carregadas === REGIOES.length) atualizarDashboard();
     });
@@ -95,19 +119,26 @@ function carregarTudo() {
 }
 
 function processarAba(table, regiao) {
-  for (let r = 0; r < table.getNumberOfRows(); r++) {
-    const escola = table.getValue(r, 0);
-    const data = table.getValue(r, 1);
+  for (let r = 4; r < table.getNumberOfRows(); r++) {
+    const escola = table.getValue(r, 1);
     if (!escola) continue;
 
-    for (let c = 2; c < table.getNumberOfColumns(); c += 2) {
-      const etapa = table.getValue(0, c);
-      const vagas = Number(table.getValue(r, c + 1)) || 0;
+    ETAPAS.forEach(e => {
+      const anoSerie = table.getValue(r, e.anoCol);
+      const vagas = Number(table.getValue(r, e.vagasCol)) || 0;
+      const data = table.getValue(r, e.anoCol - 1);
 
-      if (ETAPAS.includes(etapa)) {
-        dados.push({ regiao, escola, etapa, vagas, data });
+      if (anoSerie && vagas > 0) {
+        dados.push({
+          regiao,
+          escola,
+          etapa: e.nome,
+          anoSerie,
+          vagas,
+          data
+        });
       }
-    }
+    });
   }
 }
 
@@ -121,26 +152,76 @@ function atualizarDashboard() {
   document.getElementById("ultimaData").innerText =
     dados.map(d=>d.data).filter(Boolean).sort().pop() || "–";
 
-  desenharGrafico("chartRegiao", agrupar("regiao"), "Vagas por Região");
-  desenharGrafico("chartEtapa", agrupar("etapa"), "Vagas por Etapa");
+  desenharGraficoEtapa();
 }
 
-function agrupar(campo) {
-  const m = {};
-  dados.forEach(d => m[d[campo]] = (m[d[campo]] || 0) + d.vagas);
-  return Object.entries(m);
-}
+function desenharGraficoEtapa() {
+  const agrupado = agrupar(dados, "etapa");
 
-function desenharGrafico(id, dados, titulo) {
-  if (charts[id]) charts[id].destroy();
-  charts[id] = new Chart(document.getElementById(id), {
+  if (charts.etapa) charts.etapa.destroy();
+
+  charts.etapa = new Chart(document.getElementById("chartEtapa"), {
     type: "bar",
     data: {
-      labels: dados.map(d=>d[0]),
-      datasets: [{ label: titulo, data: dados.map(d=>d[1]) }]
+      labels: Object.keys(agrupado),
+      datasets: [{
+        label: "Vagas por Etapa",
+        data: Object.values(agrupado)
+      }]
     },
-    options: { responsive: true }
+    options: {
+      onClick: (_, el) => {
+        if (el.length) {
+          const etapa = charts.etapa.data.labels[el[0].index];
+          detalharEtapa(etapa);
+        }
+      }
+    }
   });
+}
+
+function detalharEtapa(etapa) {
+  const filtrado = dados.filter(d => d.etapa === etapa);
+  const agrupado = agrupar(filtrado, "anoSerie");
+
+  document.getElementById("tituloTabela").innerText =
+    `Detalhamento – ${etapa}`;
+
+  atualizarTabela(agrupado);
+  desenharGraficoAno(agrupado);
+}
+
+function desenharGraficoAno(agrupado) {
+  if (charts.ano) charts.ano.destroy();
+
+  charts.ano = new Chart(document.getElementById("chartAno"), {
+    type: "bar",
+    data: {
+      labels: Object.keys(agrupado),
+      datasets: [{
+        label: "Vagas por Ano/Série",
+        data: Object.values(agrupado)
+      }]
+    }
+  });
+}
+
+function atualizarTabela(agrupado) {
+  const tbody = document.getElementById("tabelaAno");
+  tbody.innerHTML = "";
+
+  Object.entries(agrupado).forEach(([ano, vagas]) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${ano}</td><td>${vagas}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function agrupar(arr, campo) {
+  return arr.reduce((acc, cur) => {
+    acc[cur[campo]] = (acc[cur[campo]] || 0) + cur.vagas;
+    return acc;
+  }, {});
 }
 </script>
 
