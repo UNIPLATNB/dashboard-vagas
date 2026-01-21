@@ -1,14 +1,13 @@
 const planilhaId = "12Ou7DzGLBmYIxUDJqvgRnVUejheSMTSoD0dtkC_50BE";
 
-// mapa fixo das colunas (não muda a planilha)
 const seriesMap = [
-  { serie: 3, vaga: 4 },   // D / E
-  { serie: 6, vaga: 7 },   // G / H
-  { serie: 9, vaga: 10 },  // J / K
-  { serie: 12, vaga: 13 }, // M / N
-  { serie: 15, vaga: 16 }, // P / Q
-  { serie: 18, vaga: 19 }, // S / T
-  { serie: 21, vaga: 22 }  // V / W
+  { serie: 3, vaga: 4 },
+  { serie: 6, vaga: 7 },
+  { serie: 9, vaga: 10 },
+  { serie: 12, vaga: 13 },
+  { serie: 15, vaga: 16 },
+  { serie: 18, vaga: 19 },
+  { serie: 21, vaga: 22 }
 ];
 
 function carregarRegiao(aba) {
@@ -19,11 +18,9 @@ function carregarRegiao(aba) {
     .then(text => {
       const json = JSON.parse(text.substring(47, text.length - 2));
       const rows = json.table.rows;
-
       const cards = document.getElementById("cards");
       cards.innerHTML = "";
 
-      // começa após o cabeçalho
       for (let i = 4; i < rows.length; i++) {
         const c = rows[i].c;
         if (!c || !c[1]?.v) continue;
@@ -31,7 +28,11 @@ function carregarRegiao(aba) {
         let html = `<h2>${c[1].v}</h2>`;
 
         seriesMap.forEach(m => {
-          const nomeSerie = c[m.serie]?.v;
+          const nomeSerie =
+            typeof c[m.serie]?.v === "string"
+              ? c[m.serie].v
+              : null;
+
           const vagas = c[m.vaga]?.v ?? 0;
 
           if (nomeSerie) {
@@ -44,12 +45,9 @@ function carregarRegiao(aba) {
         card.innerHTML = html;
         cards.appendChild(card);
       }
-    })
-    .catch(err => console.error(err));
+    });
 }
 
 const select = document.getElementById("regiao");
-select.addEventListener("change", () => carregarRegiao(select.value));
-
-// carrega ao abrir
+select.onchange = () => carregarRegiao(select.value);
 carregarRegiao(select.value);
